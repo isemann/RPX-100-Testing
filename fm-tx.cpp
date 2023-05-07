@@ -39,11 +39,13 @@ using namespace std;
 lms_device_t *device = NULL;
 std::stringstream msg;
 std::stringstream HEXmsg;
-uint8_t setRX = 0x00;     //all other bit = 0 --> 6m
-uint8_t setTXwoBP = 0x0F; //all other bit = 0 --> direct path without BP
-uint8_t setTX6m = 0x03;   //all other bit = 0 --> 6m with BP
-uint8_t setTX2m = 0x07;   //all other bit = 0 --> 2m with BP
-uint8_t setTX70cm = 0x0B; //all other bit = 0 --> 70cm with BP
+uint8_t *setGPIO;
+uint8_t readGPIO;
+uint8_t setRX = 0x00;     // all other bit = 0 --> 6m
+uint8_t setTXwoBP = 0x0F; // all other bit = 0 --> direct path without BP
+uint8_t setTX6m = 0x03;   // all other bit = 0 --> 6m with BP
+uint8_t setTX2m = 0x07;   // all other bit = 0 --> 2m with BP
+uint8_t setTX70cm = 0x0B; // all other bit = 0 --> 70cm with BP
 float centerFrequency = 52.8e6;
 string mode = "TX6m";
 float normalizedGain = 1;
@@ -84,30 +86,35 @@ int main(int argc, char *argv[])
                     cout << "Starting RPX-100 with following setting:\n";
                     cout << "Mode: " << argv[c] << endl;
                     modeSelector = 0;
+                    setGPIO = &setRX;
                 }
                 else if (mode == "TXwoBP")
                 {
                     cout << "Starting RPX-100 with following setting:\n";
                     cout << "Mode: " << argv[c] << endl;
                     modeSelector = 1;
+                    setGPIO = &setTXwoBP;
                 }
                 else if (mode == "TX6m")
                 {
                     cout << "Starting RPX-100 with following setting:\n";
                     cout << "Mode: " << argv[c] << endl;
                     modeSelector = 2;
+                    setGPIO = &setTX6m;
                 }
                 else if (mode == "TX2m")
                 {
                     cout << "Starting RPX-100 with following setting:\n";
                     cout << "Mode: " << argv[c] << endl;
                     modeSelector = 3;
+                    setGPIO = &setTX2m;
                 }
                 else if (mode == "TX70cm")
                 {
                     cout << "Starting RPX-100 with following setting:\n";
                     cout << "Mode: " << argv[c] << endl;
                     modeSelector = 4;
+                    setGPIO = &setTX70cm;
                 }
                 else if (mode == "help")
                 {
@@ -180,94 +187,94 @@ int main(int argc, char *argv[])
         }
     }
 
-    pid_t pid, sid;
-    pid = fork();
-    if (pid < 0)
-    {
-        return 1;
-    }
-    if (pid > 0)
-    {
-        return 1;
-    }
+    // pid_t pid, sid;
+    // pid = fork();
+    // if (pid < 0)
+    // {
+    //     return 1;
+    // }
+    // if (pid > 0)
+    // {
+    //     return 1;
+    // }
 
-    umask(0);
+    // umask(0);
 
-    sid = setsid();
-    if (sid < 0)
-    {
-        return 1;
-    }
+    // sid = setsid();
+    // if (sid < 0)
+    // {
+    //     return 1;
+    // }
 
-    if ((chdir("/")) < 0)
-    {
-        return 1;
-    }
+    // if ((chdir("/")) < 0)
+    // {
+    //     return 1;
+    // }
 
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
+    // close(STDIN_FILENO);
+    // close(STDOUT_FILENO);
+    // close(STDERR_FILENO);
 
     LogInit();
-    Logger("RPX-100 was started succesfully with following settings:");
+    Logger("RPX-100 was started succesfully with following settings:\n");
     msg.str("");
-    msg << "Mode: " << mode;
+    msg << "Mode: " << mode << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Center Frequency: " << centerFrequency;
+    msg << "Center Frequency: " << centerFrequency << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Gain: " << normalizedGain;
+    msg << "Gain: " << normalizedGain << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Tone Frequency: " << toneFrequency;
+    msg << "Tone Frequency: " << toneFrequency << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Modulation factor: " << modFactor;
+    msg << "Modulation factor: " << modFactor << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Duration: " << duration;
+    msg << "Duration: " << duration << "\n";
     Logger(msg.str());
     msg.str("");
-    msg << "Sample Rate: " << sampleRate;
+    msg << "Sample Rate: " << sampleRate << "\n";
     Logger(msg.str());
 
-
-    //Find devices
+    // Find devices
     int n;
-    lms_info_str_t list[8]; //should be large enough to hold all detected devices
+    lms_info_str_t list[8]; // should be large enough to hold all detected devices
     if ((n = LMS_GetDeviceList(list)) < 0)
     {
-        error(); //NULL can be passed to only get number of devices
+        error(); // NULL can be passed to only get number of devices
     }
     msg.str("");
-    msg << "Number of devices found: " << n;
-    Logger(msg.str()); //print number of devices
+    msg << "Number of devices found: " << n << endl;
+    Logger(msg.str()); // print number of devices
     if (n < 1)
     {
         return -1;
     }
 
-    if (LMS_Open(&device, list[0], NULL)) //open the first device
+    if (LMS_Open(&device, list[0], NULL)) // open the first device
     {
         error();
     }
     sleep(1);
-    //Initialize device with default configuration
+    // Initialize device with default configuration
     if (LMS_Init(device) != 0)
     {
         error();
     }
     sleep(1);
 
-    uint8_t gpio_val = 0;
-    if (LMS_GPIORead(device, &gpio_val, 1) != 0)
+    if (LMS_GPIORead(device, &readGPIO, 1) != 0)
     {
         error();
     }
     msg.str("");
-    msg << "Read current GPIO state.\n";
+    msg << "Read current GPIO state: " << (int)readGPIO << endl;
     Logger(msg.str());
+
+    print_gpio(readGPIO);
 
     uint8_t gpio_dir = 0xFF;
     if (LMS_GPIODirWrite(device, &gpio_dir, 1) != 0)
@@ -275,60 +282,32 @@ int main(int argc, char *argv[])
         error();
     }
 
-    if (LMS_GPIODirRead(device, &gpio_val, 1) != 0)
+    if (LMS_GPIODirRead(device, &readGPIO, 1) != 0)
     {
         error();
     }
     msg.str("");
-    msg << "Set GPIOs direction to output.\n";
+    msg << "Set GPIOs direction to output." << endl;
+    Logger(msg.str());
+    print_gpio(readGPIO);
+
+    msg.str("");
+    msg << "setGPIO: " << (int)*setGPIO <<endl;
     Logger(msg.str());
 
-    switch (modeSelector)
+    if (LMS_GPIOWrite(device, setGPIO, 1) != 0)
     {
-    case 0:
-        if (LMS_GPIOWrite(device, &setRX, 1) != 0)
-        {
-            error();
-        }
-        break;
-
-    case 1:
-        if (LMS_GPIOWrite(device, &setTXwoBP, 1) != 0)
-        {
-            error();
-        }
-        break;
-
-    case 2:
-        if (LMS_GPIOWrite(device, &setTX6m, 1) != 0)
-        {
-            error();
-        }
-        break;
-
-    case 3:
-        if (LMS_GPIOWrite(device, &setTX2m, 1) != 0)
-        {
-            error();
-        }
-        break;
-
-    case 4:
-        if (LMS_GPIOWrite(device, &setTX70cm, 1) != 0)
-        {
-            error();
-        }
-        break;
+        error();
     }
-
-    if (LMS_GPIORead(device, &gpio_val, 1) != 0)
+ 
+    if (LMS_GPIORead(device, &readGPIO, 1) != 0)
     {
         error();
     }
     msg.str("");
-    msg << "GPIO Output to High Level:\n";
-    print_gpio(gpio_val);
+    msg << "GPIO Output: " << (int)readGPIO << endl;
     Logger(msg.str());
+    print_gpio(readGPIO);
 
     msg.str("");
     msg << "LimeRFE set to " << mode << endl;
@@ -338,61 +317,61 @@ int main(int argc, char *argv[])
     const int tx_time = (const int)duration;
     float f_ratio = toneFrequency / sampleRate;
 
-    //Enable TX channel,Channels are numbered starting at 0
+    // Enable TX channel,Channels are numbered starting at 0
     if (LMS_EnableChannel(device, LMS_CH_TX, 0, true) != 0)
         error();
 
-    //Set sample rate
+    // Set sample rate
     if (LMS_SetSampleRate(device, sampleRate, 0) != 0)
         error();
     msg.str("");
     msg << "Sample rate: " << sampleRate / 1e6 << " MHz" << endl;
     Logger(msg.str());
 
-    //Set center frequency
+    // Set center frequency
     if (LMS_SetLOFrequency(device, LMS_CH_TX, 0, centerFrequency) != 0)
         error();
     msg.str("");
     msg << "Center frequency: " << centerFrequency / 1e6 << " MHz" << endl;
     Logger(msg.str());
 
-    //select Low TX path for LimeSDR mini --> TX port 2 (misslabed in MINI, correct in USB)
+    // select Low TX path for LimeSDR mini --> TX port 2 (misslabed in MINI, correct in USB)
     if (LMS_SetAntenna(device, LMS_CH_TX, 0, LMS_PATH_TX2) != 0)
         error();
 
-    //set TX gain
+    // set TX gain
     if (LMS_SetNormalizedGain(device, LMS_CH_TX, 0, normalizedGain) != 0)
         error();
 
-    //calibrate Tx, continue on failure
+    // calibrate Tx, continue on failure
     LMS_Calibrate(device, LMS_CH_TX, 0, sampleRate, 0);
 
-    //Streaming Setup
+    // Streaming Setup
 
-    lms_stream_t tx_stream;                        //stream structure
-    tx_stream.channel = 0;                         //channel number
-    tx_stream.fifoSize = 256 * 1024;               //fifo size in samples
-    tx_stream.throughputVsLatency = 0.8;           //0 min latency, 1 max throughput
-    tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32; //set dataformat for tx_stream to uint16 or floating point samples
+    lms_stream_t tx_stream;                        // stream structure
+    tx_stream.channel = 0;                         // channel number
+    tx_stream.fifoSize = 256 * 1024;               // fifo size in samples
+    tx_stream.throughputVsLatency = 0.8;           // 0 min latency, 1 max throughput
+    tx_stream.dataFmt = lms_stream_t::LMS_FMT_F32; // set dataformat for tx_stream to uint16 or floating point samples
     tx_stream.isTx = true;
 
-    //modulator
+    // modulator
     unsigned int num_samples = 1024;         // number of samples
     freqmod mod = freqmod_create(modFactor); // modulator
 
-    //Initialize data buffers
-    const int buffer_size = 1024 * 8;
-    liquid_float_complex mod_buffer[buffer_size]; //TX buffer to hold complex values - liquid library)
-    float test_tone[2*buffer_size];
+    // Initialize data buffers
+    const int buffer_size = 1024;
+    liquid_float_complex mod_buffer[buffer_size]; // TX buffer to hold complex values - liquid library)
+    float test_tone[2 * buffer_size];
 
     msg.str("");
     msg << "Modulation Factor: " << modFactor << endl;
     Logger(msg.str());
 
-    for (int t = 0; t < 2*buffer_size; t++)
+    for (int t = 0; t < 2 * buffer_size; t++)
     {
         float w = 2 * M_PI * t * f_ratio;
-        test_tone[t] = 5*sin(w+0.2);
+        test_tone[t] = 5 * sin(w + 0.2);
     }
     freqmod_modulate_block(mod, test_tone, buffer_size, mod_buffer);
 
@@ -401,14 +380,14 @@ int main(int argc, char *argv[])
     msg << "sample count per send call: " << send_cnt << std::endl;
     Logger(msg.str());
 
-    //Streaming
+    // Streaming
     auto t1 = chrono::high_resolution_clock::now();
     auto t2 = t1;
     LMS_SetupStream(device, &tx_stream);
-    LMS_StartStream(&tx_stream);                                                 //Start streaming
-    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(tx_time)) //run for 10 seconds
+    LMS_StartStream(&tx_stream);                                                 // Start streaming
+    while (chrono::high_resolution_clock::now() - t1 < chrono::seconds(tx_time)) // run for 10 seconds
     {
-        //Transmit samples
+        // Transmit samples
         int ret = LMS_SendStream(&tx_stream, mod_buffer, send_cnt, nullptr, 1000);
         if (ret != send_cnt)
         {
@@ -417,28 +396,43 @@ int main(int argc, char *argv[])
             Logger(msg.str());
         }
 
-        //Print data rate (once per second)
+        // Print data rate (once per second)
         if (chrono::high_resolution_clock::now() - t2 > chrono::seconds(5))
         {
             t2 = chrono::high_resolution_clock::now();
             lms_stream_status_t status;
-            LMS_GetStreamStatus(&tx_stream, &status); //Get stream status
+            LMS_GetStreamStatus(&tx_stream, &status); // Get stream status
             msg.str("");
-            msg << "TX data rate: " << status.linkRate / 1e6 << " MB/s\n"; //link data rate
+            msg << "TX data rate: " << status.linkRate / 1e6 << " MB/s\n"; // link data rate
             Logger(msg.str());
         }
     }
 
     sleep(1);
-    //Stop streaming
+    // Stop streaming
     LMS_StopStream(&tx_stream);
     LMS_DestroyStream(device, &tx_stream);
 
-    //Disable TX channel
+    // Disable TX channel
     if (LMS_EnableChannel(device, LMS_CH_TX, 0, false) != 0)
         error();
 
-    //Close device
+    setGPIO = &setRX;
+    if (LMS_GPIOWrite(device, setGPIO, 1) != 0)
+    {
+        error();
+    }
+ 
+    if (LMS_GPIORead(device, &readGPIO, 1) != 0)
+    {
+        error();
+    }
+    msg.str("");
+    msg << "GPIO Output: " << (int)readGPIO << endl;
+    Logger(msg.str());
+    print_gpio(readGPIO);
+
+    // Close device
     if (LMS_Close(device) == 0)
     {
         msg.str("");
@@ -461,9 +455,12 @@ int error()
 
 void print_gpio(uint8_t gpio_val)
 {
+    msg.str("");
+    msg << endl;
     for (int i = 0; i < 8; i++)
     {
         bool set = gpio_val & (0x01 << i);
         msg << "GPIO" << i << ": " << (set ? "High" : "Low") << std::endl;
     }
+    Logger(msg.str());
 }

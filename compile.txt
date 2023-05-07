@@ -1,1 +1,4 @@
 /usr/bin/g++ -g /opt/build/RPX-100/RPX-100.cpp -g /opt/build/RPX-100/SDRsamples.cpp -g /opt/build/RPX-100/WebSocketServer.cpp -g /opt/build/RPX-100/Util.cpp -g /opt/build/RPX-100/sockets/*.cpp -o /opt/build/RPX-100/RPX-100 -lLimeSuite -L/usr/lib -lpthread -L/usr/lib -lliquid -L/usr/lib -lwebsockets -L/usr/lib
+
+fm-tx
+/usr/bin/g++ -g ~/RPX-100/fm-tx.cpp -g ~/RPX-100/Util.cpp -g ~/RPX-100/sockets/*.cpp -o ~/RPX-100/fm-tx -lLimeSuite -L/usr/lib lpthread -L/usr/lib -lliquid -L/usr/lib
